@@ -3,6 +3,7 @@
 
 # Enviroment
 HOMEDIR=~/openwrt-archer-c7-v2-builder
+MAKECORES=3
 
 # Stop on error
 set -e
@@ -17,8 +18,6 @@ then
 
     ./scripts/feeds update -a -f
     ./scripts/feeds install -a
-    make menuconfig
-    make defconfig
 else
     echo "Found source/ directory from previous git clone"
     echo "Skipping..."
@@ -33,13 +32,12 @@ else
     git clean -f -d
     git pull
 
+    make clean
+
     cp -r ../files ./
     cp $HOMEDIR/config.seed $HOMEDIR/source/.config
     ./scripts/feeds update -a -f
     ./scripts/feeds install -a
-    make dirclean
-    make menuconfig
-    make defconfig
 fi
 
 # Patch & customize
@@ -63,8 +61,10 @@ fi
 #rm -rf $HOMEDIR/source/target/linux/generic/patches-4.9
 
 # Compile stuff
+make menuconfig
+make defconfig
 make download
-make -j3 V=s
+make -j$MAKECORES V=s
 
 # Cleaning up for git
 mkdir -p $HOMEDIR/openwrt-archer-c7-v2
