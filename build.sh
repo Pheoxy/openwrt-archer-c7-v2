@@ -3,7 +3,7 @@
 
 # Enviroment
 GIT_BRANCH='openwrt-18.06'
-CORES='-j6'
+CORES='-j7'
 DEBUG='false'
 
 # Stop on error
@@ -49,19 +49,16 @@ if [ ! -d openwrt/ ]
         git clean -f -d
         git pull
 
-        make distclean
+        make dirclean
 
         ./scripts/feeds update -a
         ./scripts/feeds install -a
 fi
   
 # Setup .config from config.seed and update seed for new changes
-# cp ../config.seed ../openwrt/.config
-# ./scripts/diffconfig.sh > diffconfig
-# # Write changes to .config
-# cp diffconfig .config
-#make defconfig;make oldconfig
-make menuconfig
+cp ../config.seed ../openwrt/.config
+make defconfig
+
 
 # Compile
 make download
@@ -71,9 +68,9 @@ mkdir -p ../output
 
 if [ $DEBUG=true ]
     then
-        time make V=s $CORES 2>&1 | tee ../output/make.log | grep -i error
+        time ionice -c 3 nice -n 20 make $CORES V=s 2>&1 | tee ../output/make.log | grep -i error
     else
-        time make $CORES
+        time ionice -c 3 nice -n19 make $CORES
 fi
 
 # Cleaning up for git
@@ -84,7 +81,6 @@ if [ -f ../output/make.log ]
         mv ../output/make.log ../output/$(date +%Y%m%d%H%M)/make.log
 fi
 
-cp .config ../output/$(date +%Y%m%d%H%M)/config.seed.new
 cp -R bin/targets/* ../output/$(date +%Y%m%d%H%M)/
 
 echo "Build Success!"
