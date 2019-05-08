@@ -2,8 +2,8 @@
 # Build an updated Archer C7 V2 Openwrt Image
 
 # Enviroment
-HOMEDIR=~/openwrt-archer-c7-v2-builder
-MAKECORES=3
+BUILDDIR=~/Development/openwrt-archer-c7-v2-builder
+MAKECORES=1
 
 # Stop on error
 set -e
@@ -12,9 +12,9 @@ set -e
 if [ ! -d source/ ]
 then
     git clone https://git.openwrt.org/openwrt/openwrt.git source
-    cd $HOMEDIR/source
-    cp -r ../files ./
-    cp $HOMEDIR/config.seed $HOMEDIR/source/.config
+    cd $BUILDDIR/source
+    #cp -r ../files ./
+    cp $BUILDDIR/config.seed $BUILDDIR/source/.config
 
     ./scripts/feeds update -a -f
     ./scripts/feeds install -a
@@ -23,7 +23,7 @@ else
     echo "Skipping..."
     echo "Pulling updates from git and cleaning source/"
 
-    cd $HOMEDIR/source
+    cd $BUILDDIR/source
     rm -rf feeds/*
     rm -rf package/*
 
@@ -34,8 +34,8 @@ else
 
     make clean
 
-    cp -r ../files ./
-    cp $HOMEDIR/config.seed $HOMEDIR/source/.config
+    #cp -r ../files ./
+    cp $BUILDDIR/config.seed $BUILDDIR/source/.config
     ./scripts/feeds update -a -f
     ./scripts/feeds install -a
 fi
@@ -54,27 +54,27 @@ fi
 #rm -f ./target/linux/ar71xx/base-files/lib/upgrade/allnet.sh
 #rm -f ./target/linux/ar71xx/base-files/lib/upgrade/merakinand.sh
 
-#mv $HOMEDIR/source/target/linux/generic/backport-4.9/* $HOMEDIR/source/target/linux/generic/pending-4.9/
-#rm -rf $HOMEDIR/source/target/linux/generic/patches-4.4
+#mv $BUILDDIR/source/target/linux/generic/backport-4.9/* $BUILDDIR/source/target/linux/generic/pending-4.9/
+#rm -rf $BUILDDIR/source/target/linux/generic/patches-4.4
 
-#mv $HOMEDIR/source/target/linux/generic/backport-4.14/* $HOMEDIR/source/target/linux/generic/pending-4.14/
-#rm -rf $HOMEDIR/source/target/linux/generic/patches-4.9
+#mv $BUILDDIR/source/target/linux/generic/backport-4.14/* $BUILDDIR/source/target/linux/generic/pending-4.14/
+#rm -rf $BUILDDIR/source/target/linux/generic/patches-4.9
 
 # Compile stuff
 make menuconfig
 make defconfig
 make download
-make -j$MAKECORES V=s
+make -j$MAKECORES V=s > log.txt
 
 # Cleaning up for git
-mkdir -p $HOMEDIR/openwrt-archer-c7-v2
-#rm -rf $HOMEDIR/openwrt-archer-c7-v2/files/*
-#rm -f $HOMEDIR/openwrt-archer-c7-v2/patches/*
-#cp $HOMEDIR/patches/* $HOMEDIR/openwrt-archer-c7-v2/patches/
-#cp -r $HOMEDIR/files/* $HOMEDIR/openwrt-archer-c7-v2/files/
-cp $HOMEDIR/source/.config $HOMEDIR/openwrt-archer-c7-v2/
-cp $HOMEDIR/source/bin/targets/ar71xx/generic/* $HOMEDIR/openwrt-archer-c7-v2/
-echo "Copied files to $HOMEDIR/openwrt-archer-c7-v2"
+mkdir -p $BUILDDIR/openwrt-archer-c7-v2
+#rm -rf $BUILDDIR/openwrt-archer-c7-v2/files/*
+#rm -f $BUILDDIR/openwrt-archer-c7-v2/patches/*
+#cp $BUILDDIR/patches/* $BUILDDIR/openwrt-archer-c7-v2/patches/
+#cp -r $BUILDDIR/files/* $BUILDDIR/openwrt-archer-c7-v2/files/
+cp $BUILDDIR/source/.config $BUILDDIR/openwrt-archer-c7-v2/
+cp $BUILDDIR/source/bin/targets/ar71xx/generic/* $BUILDDIR/openwrt-archer-c7-v2/
+echo "Copied files to $BUILDDIR/openwrt-archer-c7-v2"
 echo "Build Success!"
 
 exit 0
