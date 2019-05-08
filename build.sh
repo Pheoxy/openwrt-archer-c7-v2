@@ -1,80 +1,92 @@
 #!/bin/bash
-# Build an updated Archer C7 V2 Openwrt Image
+# Build openwrt in docker container
 
 # Enviroment
-BUILDDIR=~/Development/openwrt-archer-c7-v2-builder
-MAKECORES=1
+GIT_BRANCH='openwrt-18.06'
+CORES='-j6'
+DEBUG='false'
 
 # Stop on error
 set -e
 
-# Git clone openwrt source
-if [ ! -d source/ ]
-then
-    git clone https://git.openwrt.org/openwrt/openwrt.git source
-    cd $BUILDDIR/source
-    #cp -r ../files ./
-    cp $BUILDDIR/config.seed $BUILDDIR/source/.config
+## Setup ccache
+# Update symlinks
+sudo /usr/sbin/update-ccache-symlinks
 
-    ./scripts/feeds update -a -f
-    ./scripts/feeds install -a
-else
-    echo "Found source/ directory from previous git clone"
-    echo "Skipping..."
-    echo "Pulling updates from git and cleaning source/"
+# Prepend ccache into the PATH
+# if [[ -z "${/usr/lib/ccache:$PATH}" ]];
+#     then
+#         MY_SCRIPT_VARIABLE="Some default value because DEPLOY_ENV is undefined"
+#     else
+#         MY_SCRIPT_VARIABLE="${DEPLOY_ENV}"
+# fi
+# echo "printenv PATH" | find /C /I ";</usr/lib/ccache:$PATH>;"
 
-    cd $BUILDDIR/source
-    rm -rf feeds/*
-    rm -rf package/*
+echo 'export PATH="/usr/lib/ccache:$PATH"' | tee -a ~/.bashrc
 
-    git fetch origin
-    git reset --hard origin/master
-    git clean -f -d
-    git pull
+# Source bashrc to test the new PATH
+source ~/.bashrc
 
-    make clean
+# Git clone openwrt openwrt
+if [ ! -d openwrt/ ]
+    then
+        git clone https://git.openwrt.org/openwrt/openwrt.git -b $GIT_BRANCH
+        cd openwrt
 
-    #cp -r ../files ./
-    cp $BUILDDIR/config.seed $BUILDDIR/source/.config
-    ./scripts/feeds update -a -f
-    ./scripts/feeds install -a
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+    else
+        echo "Found openwrt/ directory from previous git clone"
+        echo "Skipping..."
+        echo "Pulling updates from git and cleaning openwrt/"
+
+        cd openwrt
+        rm -rf feeds/*
+        rm -rf package/*
+
+        git fetch origin
+        git reset --hard origin/$GIT_BRANCH
+        git clean -f -d
+        git pull
+
+        make distclean
+
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a
+fi
+  
+# Setup .config from config.seed and update seed for new changes
+# cp ../config.seed ../openwrt/.config
+# ./scripts/diffconfig.sh > diffconfig
+# # Write changes to .config
+# cp diffconfig .config
+#make defconfig;make oldconfig
+make menuconfig
+
+# Compile
+make download
+
+# Make output folders
+mkdir -p ../output
+
+if [ $DEBUG=true ]
+    then
+        time make V=s $CORES 2>&1 | tee ../output/make.log | grep -i error
+    else
+        time make $CORES
 fi
 
-# Patch & customize
-#for patchfile in `ls ../patches`; do
-#    echo "Applying patch: $patchfile"
-#    patch -p1 < ../patches/$patchfile
-#done
-
-# Remove stuff
-#rm -f ./feeds/luci/protocols/luci-proto-ppp/luasrc/model/cbi/admin_network/proto_pppoa.lua
-#rm -f ./feeds/luci/protocols/luci-proto-ipv6/luasrc/model/network/proto_aiccu.lua
-#rm -f ./feeds/luci/protocols/luci-proto-ipv6/luasrc/model/cbi/admin_network/proto_aiccu.lua
-#rm -f ./target/linux/ar71xx/base-files/lib/upgrade/dir825.sh
-#rm -f ./target/linux/ar71xx/base-files/lib/upgrade/allnet.sh
-#rm -f ./target/linux/ar71xx/base-files/lib/upgrade/merakinand.sh
-
-#mv $BUILDDIR/source/target/linux/generic/backport-4.9/* $BUILDDIR/source/target/linux/generic/pending-4.9/
-#rm -rf $BUILDDIR/source/target/linux/generic/patches-4.4
-
-#mv $BUILDDIR/source/target/linux/generic/backport-4.14/* $BUILDDIR/source/target/linux/generic/pending-4.14/
-#rm -rf $BUILDDIR/source/target/linux/generic/patches-4.9
-
-# Compile stuff
-make menuconfig
-make defconfig
-make download
-make -j$MAKECORES V=s > log.txt
-
 # Cleaning up for git
-mkdir -p $BUILDDIR/openwrt-archer-c7-v2
-#rm -rf $BUILDDIR/openwrt-archer-c7-v2/files/*
-#rm -f $BUILDDIR/openwrt-archer-c7-v2/patches/*
-#cp $BUILDDIR/patches/* $BUILDDIR/openwrt-archer-c7-v2/patches/
-#cp -r $BUILDDIR/files/* $BUILDDIR/openwrt-archer-c7-v2/files/
-cp $BUILDDIR/source/.config $BUILDDIR/openwrt-archer-c7-v2/
-cp $BUILDDIR/source/bin/targets/ar71xx/generic/* $BUILDDIR/openwrt-archer-c7-v2/
-echo "Copied files to $BUILDDIR/openwrt-archer-c7-v2"
+mkdir -p ../output/$(date +%Y%m%d%H%M)
+
+if [ -f ../output/make.log ]
+    then
+        mv ../output/make.log ../output/$(date +%Y%m%d%H%M)/make.log
+fi
+
+cp .config ../output/$(date +%Y%m%d%H%M)/config.seed.new
+cp -R bin/targets/* ../output/$(date +%Y%m%d%H%M)/
+
 echo "Build Success!"
 
 exit 0
