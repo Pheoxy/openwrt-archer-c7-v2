@@ -58,6 +58,7 @@ fi
 # Setup .config from config.seed and update seed for new changes
 cp ../config.seed ../openwrt/.config
 make defconfig
+#make menuconfig
 
 
 # Compile

@@ -1,4 +1,4 @@
-# TP-Link Archer C7 V2 AC1750
+# OpenWRT Firmware (TP-Link Archer C7 V2)
 Thanks to @infinitnet and those I haven't mentioned for all the help!
 
 ## Features
